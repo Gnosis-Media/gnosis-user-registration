@@ -1,11 +1,14 @@
 import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash,check_password_hash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import database_exists, create_database
-
+from flask_cors import CORS
+#CORS 
 app = Flask(__name__)
+CORS(app)
+C_PORT = 5000
 
 # Use the existing database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:Wfe._84ivN3UX4j.X2z!dfKnAiRA@content-database-1.c1qcm4w2sbne.us-east-1.rds.amazonaws.com:3306/user_db'
@@ -47,10 +50,23 @@ def get_users():
     users = User.query.all()
     return jsonify([{"id": user.id, "username": user.username, "email": user.email} for user in users]), 200
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    if not data or not data.get('username') or not data.get('password'):
+        return jsonify({"error": "Missing username or password"}), 400
+    
+    user = User.query.filter_by(username=data['username']).first()
+    if user and check_password_hash(user.password_hash, data['password']):
+        return jsonify({"message": "Login successful", "token": "your_generated_token"}), 200
+    else:
+        return jsonify({"error": "Invalid username or password"}), 401
+
+
 
 if __name__ == '__main__':
     with app.app_context():
         if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
             create_database(app.config['SQLALCHEMY_DATABASE_URI'])
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=True,port=C_PORT)

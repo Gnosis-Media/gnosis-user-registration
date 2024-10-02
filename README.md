@@ -8,7 +8,7 @@ How to use
 
 1. pip install -r requirements.txt (setup)
 
-2. flask run
+2. flask run -p 5000
 
 3. "In the terminal (while executing 'flask run')"
 
