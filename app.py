@@ -8,10 +8,10 @@ from flask_cors import CORS
 #CORS 
 app = Flask(__name__)
 CORS(app)
-C_PORT = 5000
+C_PORT = 5007
 
 # Use the existing database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:Wfe._84ivN3UX4j.X2z!dfKnAiRA@content-database-1.c1qcm4w2sbne.us-east-1.rds.amazonaws.com:3306/user_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:WmhkO3h8qxJJiPpdoYvc@users-db.c1ytbjumgtbu.us-east-1.rds.amazonaws.com:3306/user_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -69,4 +69,4 @@ if __name__ == '__main__':
         if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
             create_database(app.config['SQLALCHEMY_DATABASE_URI'])
         db.create_all()
-    app.run(debug=True,port=C_PORT)
+    app.run(host='0.0.0.0', debug=True,port=C_PORT)
