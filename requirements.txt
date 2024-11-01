@@ -16,3 +16,4 @@ SQLAlchemy-Utils==0.41.2
 typing_extensions==4.12.2
 Werkzeug==3.0.4
 wheel==0.44.0
+PyJWT==2.10.3
