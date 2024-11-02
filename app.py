@@ -104,6 +104,7 @@ def login():
             token = generate_token(user.id, user.username)            
             logging.info(f"User logged in successfully: {data['username']}")
             logging.debug(f"Token: {token}")
+            logging.debug(f"User: {user.id} {user.username}")
             return jsonify({
                 "message": "Login successful",
                 "token": token,
@@ -145,7 +146,6 @@ def validate_token():
     except jwt.InvalidTokenError:
         logging.warning("Invalid token.")
         return jsonify({"error": "Invalid token"}), 401
-
 
 if __name__ == '__main__':
     with app.app_context():
