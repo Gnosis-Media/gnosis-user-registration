@@ -9,17 +9,25 @@ from flask_cors import CORS
 import jwt
 from datetime import datetime, timedelta
 from functools import wraps
+from secrets_manager import get_service_secrets
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # CORS 
 app = Flask(__name__)
 CORS(app)
-C_PORT = 5007
 
-# Use the existing database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:WmhkO3h8qxJJiPpdoYvc@users-db.c1ytbjumgtbu.us-east-1.rds.amazonaws.com:3306/user_db'
+secrets = get_service_secrets('gnosis-user-registration')
+
+C_PORT = int(secrets.get('PORT', 5000))
+SQLALCHEMY_DATABASE_URI = (
+    f"mysql+pymysql://{secrets['MYSQL_USER']}:{secrets['MYSQL_PASSWORD_USERS']}"
+    f"@{secrets['MYSQL_HOST']}:{secrets['MYSQL_PORT']}/{secrets['MYSQL_DATABASE']}"
+)
+JWT_SECRET_KEY = secrets.get('JWT_SECRET_KEY')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -31,7 +39,7 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
-app.config['SECRET_KEY'] = 'super-secret-key'  # In production, use env variable
+app.config['SECRET_KEY'] = secrets.get('JWT_SECRET_KEY')
 JWT_EXPIRATION_HOURS = 24
 
 # Add new helper function
