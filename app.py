@@ -10,6 +10,10 @@ import jwt
 from datetime import datetime, timedelta
 from functools import wraps
 from secrets_manager import get_service_secrets
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from datetime import datetime, timedelta
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -50,6 +54,83 @@ def generate_token(user_id, username):
         'exp': datetime.now() + timedelta(hours=JWT_EXPIRATION_HOURS)
     }, app.config['SECRET_KEY'], algorithm='HS256')
     return token
+
+# Google OAuth registration logic
+GOOGLE_CLIENT_ID = "828323748695-mtijpl2s00v32vsnfag4ubfbmjara52n.apps.googleusercontent.com"
+
+@app.route('/test', methods=['GET'])
+def test():
+    return jsonify({"status": "Auth service is running"}), 200
+
+@app.route('/api/auth/google', methods=['POST'])
+def google_auth():
+    logging.info("=== Received Google Auth Request ===")
+    logging.info(f"Headers: {dict(request.headers)}")
+    logging.info(f"Body: {request.json}")
+    try:
+        # Get the token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid authorization header'}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        # Verify the Google token
+        try:
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                google_requests.Request(), 
+                GOOGLE_CLIENT_ID
+            )
+            
+            # Get user info from the token
+            email = idinfo['email']
+            name = idinfo.get('name', '').replace(' ', '_').lower()
+            
+            # Check if user exists
+            user = User.query.filter_by(email=email).first()
+            
+            if not user:
+                # Create new user
+                username = name or email.split('@')[0]
+                # Ensure username is unique
+                base_username = username
+                counter = 1
+                while User.query.filter_by(username=username).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                # Create user with random password
+                password = generate_password_hash(str(datetime.now()))
+                user = User(
+                    username=username,
+                    email=email,
+                    password_hash=password
+                )
+                db.session.add(user)
+                db.session.commit()
+                
+                logging.info(f"Created new user via Google OAuth: {email}")
+            
+            # Generate JWT token
+            token = generate_token(user.id, user.username)
+            
+            return jsonify({
+                'message': 'Login successful',
+                'token': token,
+                'user': {
+                    'id': user.id,
+                    'username': user.username
+                }
+            }), 200
+            
+        except ValueError as e:
+            logging.error(f"Token verification failed: {str(e)}")
+            return jsonify({'error': 'Invalid token'}), 401
+            
+    except Exception as e:
+        logging.error(f"Google auth error: {str(e)}")
+        return jsonify({'error': 'Authentication failed'}), 500
 
 @app.route('/api/register', methods=['POST'])
 def register_user():
@@ -155,9 +236,20 @@ def validate_token():
         logging.warning("Invalid token.")
         return jsonify({"error": "Invalid token"}), 401
 
+# Use this for prod 
+'''
 if __name__ == '__main__':
     with app.app_context():
         if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
             create_database(app.config['SQLALCHEMY_DATABASE_URI'])
         db.create_all()
     app.run(host='0.0.0.0', debug=True, port=C_PORT)
+'''
+
+# Use this for dev / testing 
+if __name__ == '__main__':
+    with app.app_context():
+        if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
+            create_database(app.config['SQLALCHEMY_DATABASE_URI'])
+        db.create_all()
+    app.run(host='0.0.0.0', debug=True, port=5007, use_reloader=False)  # Change port here
