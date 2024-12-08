@@ -19,10 +19,5 @@ def get_secrets(secret_name="gnosis-secrets", region_name="us-east-1"):
         raise e
 
 def get_service_secrets(service_name):
-
-    # For prod use 
-    '''
     secrets = get_secrets()
     return secrets.get(service_name, {})
-    '''
-

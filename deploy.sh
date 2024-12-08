@@ -7,7 +7,7 @@ set -e
 REGISTRY_NAME="gnosis-user-registration-registry"
 IMAGE_NAME="gnosis/user-registration"
 INSTANCE_ID="i-0758cee66d26b8c2a"
-INSTANCE_PUBLIC_IP="18.206.137.71"
+INSTANCE_PUBLIC_IP="54.205.195.151"
 AWS_REGION="us-east-1"
 KEY_PATH="/Users/chim/Working/cloud/Gnosis/gnosis.pem"
 EC2_USER="ec2-user"

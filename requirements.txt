@@ -20,3 +20,6 @@ google-auth>=2.22.0
 google-auth-oauthlib>=1.0.0
 PyJWT
 boto3
+# Add these new dependencies:
+cryptography  # Required for PyJWT's advanced features
+requests      # Required for making HTTP requests

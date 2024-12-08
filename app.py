@@ -30,6 +30,7 @@ SQLALCHEMY_DATABASE_URI = (
     f"@{secrets['MYSQL_HOST']}:{secrets['MYSQL_PORT']}/{secrets['MYSQL_DATABASE']}"
 )
 JWT_SECRET_KEY = secrets.get('JWT_SECRET_KEY')
+API_KEY = secrets.get('API_KEY')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -69,11 +70,11 @@ def google_auth():
     logging.info(f"Body: {request.json}")
     try:
         # Get the token from Authorization header
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'error': 'Missing or invalid authorization header'}), 401
+        token = request.json.get('credential')
+        if not token:
+            return jsonify({'error': 'Missing credential token'}), 401
         
-        token = auth_header.split(' ')[1]
+        logging.info(f"Token: {token}")
         
         # Verify the Google token
         try:
@@ -82,10 +83,14 @@ def google_auth():
                 google_requests.Request(), 
                 GOOGLE_CLIENT_ID
             )
+            logging.info(f"ID Info: {idinfo}")
             
             # Get user info from the token
             email = idinfo['email']
             name = idinfo.get('name', '').replace(' ', '_').lower()
+
+            logging.info(f"Email: {email}")
+            logging.info(f"Name: {name}")
             
             # Check if user exists
             user = User.query.filter_by(email=email).first()
@@ -114,6 +119,8 @@ def google_auth():
             
             # Generate JWT token
             token = generate_token(user.id, user.username)
+            
+            logging.info(f"Token: {token}")
             
             return jsonify({
                 'message': 'Login successful',
@@ -236,20 +243,23 @@ def validate_token():
         logging.warning("Invalid token.")
         return jsonify({"error": "Invalid token"}), 401
 
+
+@app.before_request
+def log_request_info():
+    logging.info(f"Headers: {request.headers}")
+    logging.info(f"Body: {request.get_data()}")
+
+    if request.path.startswith('/docs') or request.path.startswith('/swagger') or request.path.startswith('/api/auth/google'):
+        return
+
+    if request.headers.get('X-API-KEY') != API_KEY:
+        return jsonify({"error": "Invalid API key"}), 401
+    
+
 # Use this for prod 
-'''
 if __name__ == '__main__':
     with app.app_context():
         if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
             create_database(app.config['SQLALCHEMY_DATABASE_URI'])
         db.create_all()
     app.run(host='0.0.0.0', debug=True, port=C_PORT)
-'''
-
-# Use this for dev / testing 
-if __name__ == '__main__':
-    with app.app_context():
-        if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
-            create_database(app.config['SQLALCHEMY_DATABASE_URI'])
-        db.create_all()
-    app.run(host='0.0.0.0', debug=True, port=5007, use_reloader=False)  # Change port here
